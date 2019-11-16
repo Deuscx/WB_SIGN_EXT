@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         微博超话自动签到
-// @namespace    https://deuscx.github.io/
-// @version      1.0.5
+// @namespace    https://github.com/Deuscx/WB_SIGN_EXT
+// @version      1.0.6
 // @description  用户登录后进入微博主页，获取超级话题并自动签到
-// @homepageURL  https://deuscx.github.io/
+// @homepageURL  https://github.com/Deuscx/WB_SIGN_EXT
+// @supportURL   https://github.com/Deuscx/WB_SIGN_EXT/issues
 // @author       deus
 // @match        https://weibo.com/*
 // @match        https://www.weibo.com/*
@@ -16,7 +17,7 @@
 (function () {
     'use strict';
     const NAME = 'WB'
-    const VERSION = '1.0.5'
+    const VERSION = '1.0.6'
    
     let CONFIG;
     let CACHE;
@@ -550,20 +551,15 @@
             
             Interest.getInterestHash().then(
                 (hash) => {
-                    console.log('final ',hash)
+
 
                     var hashName=Object.keys(hash)
 
-                    console.log(hashName)
+     
                     for (let i = 0; i <hashName.length ; i++) {
-                        console.log(hash[hashName[i]]+'---'+hashName[i])
+                       // console.log(hash[hashName[i]]+'---'+hashName[i])
                         Interest.signInterest(hash[hashName[i]],hashName[i])
                     }
-                   /* for (var name in hash) {
-
-                        console.log(hash[name]+'---'+name)
-                        Interest.signInterest(hash[name], name)
-                    }*/
                 },(response)=>{
                     window.toast(`${response}`,'error')
                 }
@@ -595,7 +591,7 @@
                         pageSize=a[a.length-2][1]
                     }
                     Interest.get_topic_hash(response, pageSize, user_id).then((hash)=>{
-                        console.log('hash',hash);
+                        //console.log('hash',hash);
                         g.resolve(hash);
                     })
                 },
