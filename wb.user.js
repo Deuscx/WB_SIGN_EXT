@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         微博超话自动签到
-// @namespace    https://github.com/Deuscx/WB_SIGN_EXT
+// @namespace    https://deuscx.github.io/
 // @version      1.0.6
 // @description  用户登录后进入微博主页，获取超级话题并自动签到
 // @homepageURL  https://github.com/Deuscx/WB_SIGN_EXT
