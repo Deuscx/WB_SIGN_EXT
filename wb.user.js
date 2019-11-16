@@ -529,9 +529,7 @@
                     for (const iframe of window[NAME].iframeSet) {
                         if (iframe.promise.down) iframe.promise.down.resolve();
                     }
-                } catch (err) {
-                    console.error(`[${NAME}]`, err);
-                }
+                } catch (err){}
             }
         }
 
