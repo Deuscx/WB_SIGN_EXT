@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         微博超话自动签到
 // @namespace    https://deuscx.github.io/
-// @version      1.0.6
+// @version      1.0.7
 // @description  用户登录后进入微博主页，获取超级话题并自动签到
 // @homepageURL  https://github.com/Deuscx/WB_SIGN_EXT
 // @supportURL   https://github.com/Deuscx/WB_SIGN_EXT/issues
@@ -17,7 +17,7 @@
 (function () {
     'use strict';
     const NAME = 'WB'
-    const VERSION = '1.0.6'
+    const VERSION = '1.0.7'
    
     let CONFIG;
     let CACHE;
@@ -99,8 +99,8 @@
         onclick: null, // 点击消息框自定义事件 
         showDuration: "300", // 显示动画的时间
         hideDuration: "1000", //  消失的动画时间
-        timeOut: "8000", //  自动关闭超时时间 
-        extendedTimeOut: "1000", //  加长展示时间
+        timeOut: JSON.parse(localStorage.WB_CONFIG).TIMEOUT*1000  || (JSON.parse(localStorage.WB_CONFIG).TIMEOUT ==0? "0":"8000"), //  自动关闭超时时间 
+        extendedTimeOut: JSON.parse(localStorage.WB_CONFIG).TIMEOUT*1000 || (JSON.parse(localStorage.WB_CONFIG).TIMEOUT ==0? "0":"1000"), //  加长展示时间
         showEasing: "swing", //  显示时的动画缓冲方式
         hideEasing: "linear", //   消失时的动画缓冲方式
         showMethod: "slideDown", //   显示时的动画方式
@@ -139,7 +139,6 @@
         t.setHours(0, 1, 0, 0);
         t.setMinutes(t.getMinutes() - tz_offset);
         setTimeout(callback, t - ts_ms());
-        DEBUG('runTomorrow', t.toString());
     };
 
     const runUntilSucceed = (callback, delay = 0, period = 100) => {
@@ -171,7 +170,6 @@
         Toast: {
             init: () => {
                 try {
-                    const list = [];
                     window.toast = (msg, type = 'success', timeout = 3e3) => {
                         let d = new Date().toLocaleTimeString();
                         switch (type) {
@@ -213,19 +211,27 @@
                     console.error(`[${NAME}]`, err);
                     return $.Deferred().reject();
                 }
+            },
+            reload:() =>{
+                Essential.Toast.init();
             }
         },
         Config: {
             CONFIG_DEFAULT: {
                 AUTO_SIGN: true,
-                SHOW_TOAST: true
+                SHOW_TOAST: true,
+                TIMEOUT: 1000
             },
             NAME: {
                 AUTO_SIGN: '自动签到',
-                SHOW_TOAST: '显示浮动提示'
+                SHOW_TOAST: '显示浮动提示',
+                TIMEOUT: '延迟时间'
             },
             HELP: {
-
+                TIMEOUT:'提示：设置延迟时间为0,窗口将不会自动关闭 '
+            },
+            PLACEHOLDER:{
+                TIMEOUT:"请输入延迟时间，单位为秒"
             },
             showed: false,
             init: () => {
@@ -249,6 +255,7 @@
 
                             const id = `${NAME}_config_${itemname}`;
                             const name = getConst(itemname, Essential.Config.NAME); //Essential.Config.NAME 返回对应的中文信息
+                            const placeholder = getConst(itemname, Essential.Config.PLACEHOLDER);
 
                             let e;
                             let h;
@@ -329,7 +336,10 @@
                             div_context[0].style = 'height: 100%;overflow: auto;padding: 0 12px;margin: 0px;';
                             div_context_position.append(div_context);
                             div_style.append(div_context_position);
+
+
                             recur(Essential.Config.CONFIG_DEFAULT, div_context);
+
                             // 设置事件 点击展开或关闭侧边栏
                             div_button.click(() => {
                                 if (!Essential.Config.showed) {
@@ -348,9 +358,15 @@
                             });
                             div_button_clear.click(() => {
                                 Essential.Cache.clear();
+                                localStorage.removeItem(`${NAME}_SIGNED_ARR`);
                                 location.reload();
                             });
                             const getItemByElement = (element) => element.id.replace(`${NAME}_config_`, '');
+                            const getItemByHelpElement = (element) => element.id.replace(`${NAME}_config_`, '').replace('_help', '');
+
+                            $(`.${NAME}_help`).click(function () {
+                                window.toast(getConst(getItemByHelpElement(this), Essential.Config.HELP),'info');
+                            });
                             $(`.${NAME}_control`).click(function () { //控制次级栏的显示
                                 if ($(this).is(':checked')) {
                                     $(`#${NAME}_config_${getItemByElement(this)}_CONFIG`).show();
@@ -482,8 +498,13 @@
             save: () => {
                 CONFIG = Essential.Config.recurSave(CONFIG);
                 //CONFIG = Essential.Config.fix(CONFIG);
+                let oToastTIMEOUT = JSON.parse(localStorage.WB_CONFIG).TIMEOUT;
                 Essential.DataSync.down();
                 localStorage.setItem(`${NAME}_CONFIG`, JSON.stringify(CONFIG));
+
+                if(oToastTIMEOUT!= CONFIG.TIMEOUT){
+                    Essential.Toast.reload();
+                }
                 window.toast('设置已保存，部分设置需要刷新后生效', 'success');
             },
             clear: () => {
@@ -535,6 +556,7 @@
 
     }
 
+    let SignedArr=[]
 
     const Interest = {
         run: () => {
@@ -546,14 +568,10 @@
                 runTomorrow(Interest.run);
                 return $.Deferred().resolve();
             }
-            
+            localStorage.removeItem(`${NAME}_SIGNED_ARR`);
             Interest.getInterestHash().then(
                 (hash) => {
-
-
                     var hashName=Object.keys(hash)
-
-     
                     for (let i = 0; i <hashName.length ; i++) {
                        // console.log(hash[hashName[i]]+'---'+hashName[i])
                         Interest.signInterest(hash[hashName[i]],hashName[i])
@@ -567,7 +585,7 @@
         getInterestHash: function(){
             let user_id;
             const g = jQuery.Deferred();
-            let hash
+            let hash;
           
 
             if(!localStorage[`${NAME}_page_id`] && isNaN(parseInt(window.$CONFIG.page_id,10))){
@@ -576,7 +594,7 @@
                 if(!isNaN(parseInt(window.$CONFIG.page_id,10))){
                     localStorage[`${NAME}_page_id`]=window.$CONFIG.page_id
                 }
-                user_id =  localStorage[`${NAME}_page_id`]
+                user_id =  localStorage[`${NAME}_page_id`];
             }
 
 
@@ -585,19 +603,40 @@
             }).then((response) => {
                     var pageSize=1
                     if(response.indexOf("Pl_Official_RelationInterested__97_page")!=-1){
-                        var a=response.split(/Pl_Official_RelationInterested__97_page/)
-                        pageSize=a[a.length-2][1]
+                        var a=response.split(/Pl_Official_RelationInterested__97_page/);
+                        pageSize=a[a.length-2][1];
                     }
-                    Interest.get_topic_hash(response, pageSize, user_id).then((hash)=>{
-                        //console.log('hash',hash);
-                        g.resolve(hash);
-                    })
+                    Promise.all(Interest.get_topic_hash(response, pageSize, user_id))
+                    .then(
+                        (result)=>{
+                           this.recur_topic_hash(result).then((hash)=>{
+                            //console.log('hash',hash);
+                            g.resolve(hash);
+                        });
+                        }
+                    )
                 },
                 (err) => { 
                     console.error(`[${NAME}]`, err);
                     g.reject('获取hash失败');
                 })
             return g
+        },
+        recur_topic_hash:(arr)=>{
+            const recurDef=jQuery.Deferred();
+            let result={};
+            arr.forEach((obj)=>{
+                Object.assign(result,obj);
+            })
+            if(localStorage[`${NAME}_SIGNED_ARR`]){
+                    let arr = localStorage.getItem(`${NAME}_SIGNED_ARR`).split(",");
+                    arr.forEach((name)=>{
+                        delete result[name];
+                    })
+                    console.log(result);
+            }
+            recurDef.resolve(result);
+            return recurDef;
         },
         get_topic_hash: (response_text, page, user_id) => {
             // 从响应文本中解析出话题名称和 hash
@@ -606,30 +645,33 @@
                 page: 当前页号，用来得到下一页的链接
                 user_id: 用户ID
             */
-            var result = {};
-            var hash_start_index, name_start_index, name_end_index, name, hash;
-            const hashDef=jQuery.Deferred();
+            let promiseArr=[];
+            var name_start_index, name_end_index, name, hash;
             for (let i = 1; i <= page ; i++) {
-                $.ajax({
-                    url:`https://weibo.com/p/${user_id}/myfollow?cfs=600&relate=interested&Pl_Official_RelationInterested__97_page=${i}`
-                }).then((response_text)=>{
-                    var name_index = response_text.indexOf('screen_name=');
-                    while (name_index != -1) {
-                        // 循环得到 response_text 的话题名和 hash
-                        name_start_index = name_index + 12;
-                        name_end_index = response_text.indexOf('&', name_index); //从name_index找到&
-                        name = response_text.slice(name_start_index, name_end_index); // slice从start到end（不包含）
-                        hash = response_text.slice(name_index - 56, name_index - 56 + 38);
-                        result[name] = hash;
-                        name_index = response_text.indexOf('screen_name=', name_index + 100);
-                    }
-                    if(i === parseInt(page,10)){
-                        //console.log('result',result)
-                        hashDef.resolve(result)
-                    }
-                })
+               promiseArr.push(
+                   new Promise((resolve,reject)=>{
+                    $.ajax({
+                        url:`https://weibo.com/p/${user_id}/myfollow?cfs=600&relate=interested&Pl_Official_RelationInterested__97_page=${i}`
+                    }).then((response_text)=>{
+                        var name_index = response_text.indexOf('screen_name=');
+                        let result={};
+                        while (name_index != -1) {
+                            // 循环得到 response_text 的话题名和 hash
+                            name_start_index = name_index + 12;
+                            name_end_index = response_text.indexOf('&', name_index); //从name_index找到&
+                            name = response_text.slice(name_start_index, name_end_index); // slice从start到end（不包含）
+                            hash = response_text.slice(name_index - 56, name_index - 56 + 38);
+                            result[name] = hash;
+                            name_index = response_text.indexOf('screen_name=', name_index + 100);
+                        }
+                        resolve(result);
+                    },(err)=>{
+                        reject(err);
+                    })
+                   })
+               ) 
             }
-            return hashDef
+            return promiseArr;
         },
         signInterest: (id, name) => {
             API.Interest.signInterest(id).then((response) => {
@@ -637,9 +679,21 @@
                         window.toast(`[${name}签到成功]${response.msg} ---${response.data.alert_title}`,'success')
                         CACHE.sign_ts = ts_ms();
                         Essential.Cache.save();
+
+                        SignedArr.push(name);
+                        SignedArr = Array.from(new Set(SignedArr));
+                        localStorage.setItem(`${NAME}_SIGNED_ARR`,SignedArr); 
                     } else {
                         window.toast(`[${name}超话签到]${response.msg}`, 'warning')
-                        CACHE.sign_ts = ts_ms();
+                        if(response.code !="382004"){
+                            CACHE.sign_ts = undefined;
+                        }else{
+                            CACHE.sign_ts = ts_ms();
+
+                            SignedArr.push(name);
+                            SignedArr = Array.from(new Set(SignedArr)); 
+                            localStorage.setItem(`${NAME}_SIGNED_ARR`,SignedArr); 
+                        }
                         Essential.Cache.save();
                     }
                 },
