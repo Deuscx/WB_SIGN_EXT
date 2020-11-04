@@ -792,7 +792,6 @@
         }
     }
     const Run = () => {
-
         // 每天一次
         if (CONFIG.AUTO_SIGN) Interest.run();
 

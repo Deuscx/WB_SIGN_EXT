@@ -1,0 +1,58 @@
+.msgContainer {
+  @apply fixed;
+  background-color: transparent;
+  top: 4rem;
+  right: 40px;
+}
+
+@keyframes slide-in-right {
+  0% {
+    transform: translateX(1000px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(1000px);
+    opacity: 0;
+  }
+}
+
+.removing {
+  animation: slide-out-right 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) both;
+}
+.toastItem {
+  @apply bg-white border border-gray-400 rounded-md max-w-xs text-white z-10 py-4 px-6 cursor-pointer bg-blue-600;
+  opacity: 0.8;
+  margin-bottom: 0.5rem;
+  animation: slide-in-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.toast-info {
+  @apply bg-blue-400;
+}
+
+.toast-default {
+  @apply bg-blue-600;
+}
+
+.toast-success {
+  @apply bg-green-500;
+}
+
+.toast-error {
+  background-color: rgb(255, 82, 82);
+}
+
+.toast-warning {
+  @apply bg-yellow-400;
+}

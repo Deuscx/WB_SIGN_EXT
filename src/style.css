@@ -1,0 +1,45 @@
+/* global css */
+.configContainer {
+  @apply flex flex-col fixed bg-white z-10 rounded border border-gray-400 px-2 py-3;
+  max-width: 190px;
+  bottom: 80px;
+  right: 0px;
+  transform: translateX(100%);
+  transition-duration: 0.5s;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transition-property: transform;
+}
+
+.configContainer .cItem {
+  @apply text-sm;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.configContainer .cItem .des {
+  @apply text-gray-600;
+}
+
+#TIMEOUT {
+  appearance: none;
+  display: inline-block;
+  width: 60px;
+}
+
+.configContainer .action {
+  @apply py-2 rounded;
+  background-color: white;
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate3d(-100%, -50%, 0);
+}
+
+.configContainer .action:hover {
+  color: #ccc;
+}
+.active {
+  transform: translateX(0);
+}
