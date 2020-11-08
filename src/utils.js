@@ -6,7 +6,7 @@ const ts_ms = Date.now;
  * @param {*} ts 保存的时间戳
  */
 const isNewDay = (ts) => {
-  if (!ts) return false;
+  if (!ts) return true;
 
   const t = new Date(ts);
   t.setMinutes(t.getMinutes() + tz_offset);
