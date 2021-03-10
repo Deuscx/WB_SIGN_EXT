@@ -1,7 +1,7 @@
 import request from '../request';
 import BaseFeature from './BaseFeature';
 import { Store, ts_ms, isNewDay } from '../utils';
-import { NAME, PAGE_ID, SIGNED_ARR, WB_CONFIG_CONSTANT } from '../constants';
+import { NAME, SIGNED_ARR, WB_CONFIG_CONSTANT } from '../constants';
 
 function isCheck() {
   return Store.get('isCheck') || false;
@@ -67,55 +67,31 @@ const signInterest = (id, name) => {
   });
 };
 
-/**
- *
- * @param {*} arr
- * @returns  { 话题名: 话题id ,... }
- */
-function normalizeHash(arr) {
+function getInterestNameAId() {
   return new Promise((resolve, reject) => {
-    const result = {};
-    arr.filter(({ status }) => status === 'fulfilled').forEach(({ value }) => {
-      Object.assign(result, value);
-    });
-    if (Store.get(SIGNED_ARR)) {
-      const Sarr = Store.get(SIGNED_ARR);
-      Sarr.forEach((name) => {
-        delete result[name];
-      });
-    }
-    resolve(result);
-  });
-}
-
-function getPagesizeAndUser() {
-  return new Promise((resolve, reject) => {
-    let userId = null;
-    const pageId = window.$CONFIG.page_id;
-    // eslint-disable-next-line no-restricted-globals
-    const isPageIdValid = !isNaN(parseInt(pageId, 10));
-
-    if (!Store.has(PAGE_ID) && !isPageIdValid) {
-      window.toast.error("未获取到page_id  请到'关注页'再刷新尝试");
-      return;
-    }
-    if (isPageIdValid) {
-      Store.set(PAGE_ID, pageId);
-    }
-    userId = Store.get(PAGE_ID);
-
     request({
-      url: `p/${userId}/myfollow?relate=interested`,
+      url: 'ajax/profile/topicContent?tabid=231093_-_chaohua',
     }).then(
       (response) => {
-        let pageSize = 1;
-        const { data } = response;
-        if (data.includes('Pl_Official_RelationInterested__97_page')) {
-          const a = data.split(/Pl_Official_RelationInterested__97_page/);
-          pageSize = a[a.length - 2][1];
+        const { data: { data, ok } } = response;
+        if (ok !== 1) {
+          reject({ err: '获取关注超话失败', data });
         }
 
-        resolve({ pageSize, userId });
+        const list = data.list;
+        /**
+         *
+         * @param {*} oid
+         * @returns 超话id
+         */
+        function extractId(oid) {
+          return oid.slice(5);
+        }
+        const simList = list.map(({ oid, topic_name }) => ({
+          id: extractId(oid),
+          name: topic_name,
+        }));
+        resolve(simList);
       },
       (err) => {
         console.error(`[${NAME}]`, err);
@@ -125,55 +101,6 @@ function getPagesizeAndUser() {
   });
 }
 
-/**
- * 从响应文本中解析出话题名称和 hash
- * @param {*} pagesize 关注列表总页数
- * @param {*} userId 用户ID
- */
-async function getInterestHash(pagesize, userId) {
-  const promiseArr = [];
-  let nameStartIndex; let nameEndIndex;
-  let name;
-  let hash;
-  for (let i = 1; i <= pagesize; i++) {
-    promiseArr.push(
-      // eslint-disable-next-line no-loop-func
-      new Promise((resolve, reject) => {
-        request({
-          url: `p/${userId}/myfollow?cfs=600&relate=interested&Pl_Official_RelationInterested__97_page=${i}`,
-        }).then(
-          (response) => {
-            const { data } = response;
-            let nameIndex = data.indexOf('screen_name=');
-            const result = {};
-            while (nameIndex !== -1) {
-              // 循环得到 data 的话题名和 hash
-              nameStartIndex = nameIndex + 12;
-              nameEndIndex = data.indexOf('&', nameIndex); // 从name_index找到&
-              name = data.slice(nameStartIndex, nameEndIndex); // slice从start到end（不包含）
-              hash = data.slice(
-                nameIndex - 56,
-                nameIndex - 56 + 38,
-              );
-              result[name] = hash;
-              nameIndex = data.indexOf(
-                'screen_name=',
-                nameIndex + 100,
-              );
-            }
-            resolve(result);
-          },
-          (err) => {
-            reject(err);
-          },
-        );
-      }),
-    );
-  }
-  const result = await Promise.allSettled(promiseArr);
-
-  return normalizeHash(result);
-}
 class Interest extends BaseFeature {
   constructor() {
     super({ name: WB_CONFIG_CONSTANT });
@@ -181,10 +108,9 @@ class Interest extends BaseFeature {
 
   launch= async () => {
     const config = super.store;
-    if (!config.AUTO_SIGN) return; // 没有设置签到
-    // 判断是否签到
+    if (!config.AUTO_SIGN) return;
+
     if (isCheck() && !isNewDay(lastCheck)) {
-    // 已经签到 并且不是新的一天
       window.toast.info('今日已签到');
       return;
     }
@@ -195,12 +121,10 @@ class Interest extends BaseFeature {
       Store.set('isCheck', false);
     }
 
-    const { pageSize, userId } = await getPagesizeAndUser();
-
-    const hashMap = await getInterestHash(pageSize, userId);
+    const idNameList = await getInterestNameAId();
 
     // 当所有都签到成功后，就设置'isCheck'为true
-    Promise.all(Object.entries(hashMap).map(([name, id]) => signInterest(id, name))).then(() => {
+    Promise.all(idNameList.map(({ name, id }) => signInterest(id, name))).then(() => {
       Store.set('isCheck', true);
     });
   }
