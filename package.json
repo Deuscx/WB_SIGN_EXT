@@ -1,6 +1,6 @@
 {
   "name": "wb_sign_new",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "",
   "author": "",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "prebuild": "npm run ci && npm run clean",
     "build": "npm run build:js --production",
     "ci": "npm run lint",
-    "lint": "eslint --ext .js ."
+    "lint": "eslint --ext .js . --fix"
   },
   "dependencies": {
     "@babel/runtime": "^7.12.1",

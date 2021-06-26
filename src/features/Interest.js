@@ -19,19 +19,19 @@ const signInterestAPI = (id) => {
       textb: encodeURI('已签到'),
       status: 0,
       id, // 话题id
-      location: 'page_100808_super_index',
-      timezone: 'GMT 0800',
-      lang: 'zh-cn',
-      plat: 'Windows',
-      ua: 'Opera/9.80 (Windows NT 6.0) Presto/2.12.388 Version/12.14',
-      screen: '1920*1080',
+      /*       location: "page_100808_super_index",
+      timezone: "GMT 0800",
+      lang: "zh-cn",
+      plat: "Windows",
+      ua: "Opera/9.80 (Windows NT 6.0) Presto/2.12.388 Version/12.14",
+      screen: "1920*1080", */
       __rnd: new Date().getTime(),
     },
   });
 };
 
 let SignedArr = Store.get(SIGNED_ARR) || [];
-const signInterest = (id, name) => {
+const signInterest = ({ id, name }) => {
   return new Promise((resolve, reject) => {
     signInterestAPI(id).then(
       (response) => {
@@ -67,18 +67,21 @@ const signInterest = (id, name) => {
   });
 };
 
-function getInterestNameAId() {
+function getInterestNameAId(page = 1) {
   return new Promise((resolve, reject) => {
     request({
-      url: 'ajax/profile/topicContent?tabid=231093_-_chaohua',
+      url: `ajax/profile/topicContent?tabid=231093_-_chaohua&page=${page}`,
     }).then(
       (response) => {
-        const { data: { data, ok } } = response;
+        const {
+          data: { data, ok },
+        } = response;
         if (ok !== 1) {
           reject({ err: '获取关注超话失败', data });
         }
 
         const list = data.list;
+        const total_number = data.total_number;
         /**
          *
          * @param {*} oid
@@ -91,7 +94,13 @@ function getInterestNameAId() {
           id: extractId(oid),
           name: topic_name,
         }));
-        resolve(simList);
+        if (total_number !== 0) {
+          getInterestNameAId(page + 1).then((li) => {
+            resolve(simList.concat(li));
+          });
+        } else {
+          resolve(simList);
+        }
       },
       (err) => {
         console.error(`[${NAME}]`, err);
@@ -106,7 +115,7 @@ class Interest extends BaseFeature {
     super({ name: WB_CONFIG_CONSTANT });
   }
 
-  launch= async () => {
+  launch = async () => {
     const config = super.store;
     if (!config.AUTO_SIGN) return;
 
@@ -121,18 +130,21 @@ class Interest extends BaseFeature {
       Store.set('isCheck', false);
     }
 
-    const idNameList = await getInterestNameAId();
-
+    let idNameList = await getInterestNameAId();
+    const signedArr = Store.get(SIGNED_ARR);
+    if (signedArr && signedArr.length) {
+      idNameList = idNameList.filter((v) => !signedArr.includes(v.name));
+    }
     // 当所有都签到成功后，就设置'isCheck'为true
-    Promise.all(idNameList.map(({ name, id }) => signInterest(id, name))).then(() => {
+    Promise.all(
+      idNameList.map(({ name, id }) => signInterest({ id, name })),
+    ).then(() => {
       Store.set('isCheck', true);
     });
-  }
+  };
 
   run() {
-    this.init().then((self) => {
-
-    });
+    this.init().then((self) => {});
   }
 }
 export default new Interest();

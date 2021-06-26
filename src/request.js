@@ -29,7 +29,7 @@ instance.interceptors.response.use(
     const { response } = error;
     if (response) {
       // 请求已发出，但是不在2xx的范围
-      console.log(`发送请求失败 ${response}`);
+      console.log('发送请求失败', response);
       return Promise.reject(response);
     }
     // 处理断网的情况
