@@ -12,6 +12,7 @@
 // @match        https://weibo.com/*
 // @match        https://www.weibo.com/*
 
-// @require     https://cdn.jsdelivr.net/combine/npm/@violentmonkey/dom@1,npm/@violentmonkey/ui@0.4
+// @require     https://cdn.jsdelivr.net/npm/@violentmonkey/dom@1
+// @require     https://cdn.jsdelivr.net/npm/@violentmonkey/ui@0.4
 // @require    https://cdn.jsdelivr.net/npm/axios@0.21.0/dist/axios.min.js
 // ==/UserScript==

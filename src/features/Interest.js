@@ -67,6 +67,10 @@ const signInterest = ({ id, name }) => {
   });
 };
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function getInterestNameAId(page = 1) {
   return new Promise((resolve, reject) => {
     request({
@@ -81,7 +85,7 @@ function getInterestNameAId(page = 1) {
         }
 
         const list = data.list;
-        const total_number = data.total_number;
+        const max_page = data.max_page;
         /**
          *
          * @param {*} oid
@@ -94,7 +98,8 @@ function getInterestNameAId(page = 1) {
           id: extractId(oid),
           name: topic_name,
         }));
-        if (total_number !== 0) {
+
+        if (page < max_page) {
           getInterestNameAId(page + 1).then((li) => {
             resolve(simList.concat(li));
           });
@@ -108,6 +113,45 @@ function getInterestNameAId(page = 1) {
       },
     );
   });
+}
+
+class PromiseQueue {
+  constructor({ concurrency = 1, timeout = 0 } = {}) {
+    this.queue = [];
+    this.running = 0;
+    this.concurrency = concurrency;
+    this.timeout = timeout;
+  }
+
+  add(promiseFn) {
+    return new Promise((resolve, reject) => {
+      const wrappedFn = async () => {
+        try {
+          const timeoutPromise = promiseFn();
+
+          await delay(this.timeout);
+          const result = await timeoutPromise;
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.running--;
+          this.processQueue();
+        }
+      };
+
+      this.queue.push(wrappedFn);
+      this.processQueue();
+    });
+  }
+
+  processQueue() {
+    while (this.running < this.concurrency && this.queue.length > 0) {
+      this.running++;
+      const task = this.queue.shift();
+      task();
+    }
+  }
 }
 
 class Interest extends BaseFeature {
@@ -135,12 +179,16 @@ class Interest extends BaseFeature {
     if (signedArr && signedArr.length) {
       idNameList = idNameList.filter((v) => !signedArr.includes(v.name));
     }
+
+    // 每次只签一个 避免触发检测，增加500ms延迟
+    const queue = new PromiseQueue({ concurrency: 1, timeout: 500 });
+
+    for (const { name, id } of idNameList) {
+      await queue.add(() => signInterest({ id, name }));
+    }
+
     // 当所有都签到成功后，就设置'isCheck'为true
-    Promise.all(
-      idNameList.map(({ name, id }) => signInterest({ id, name })),
-    ).then(() => {
-      Store.set('isCheck', true);
-    });
+    Store.set('isCheck', true);
   };
 
   run() {

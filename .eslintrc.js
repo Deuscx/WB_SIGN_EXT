@@ -19,6 +19,7 @@ module.exports = {
     'linebreak-style': ["error", "windows"],
     'no-plusplus': ["off", { "allowForLoopAfterthoughts": true }],
     'camelcase': ["off", {"properties": "never","ignoreGlobals": true,"ignoreDestructuring": true,"ignoreImports": true}],
-    'no-unused-expressions': ["error", { "allowShortCircuit": true }]
+    'no-unused-expressions': ["error", { "allowShortCircuit": true }],
+    'max-classes-per-file': ["off"]
   }
 };
